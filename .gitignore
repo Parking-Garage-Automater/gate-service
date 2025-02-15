@@ -1,0 +1,33 @@
+# System files (macOS)
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+*.egg-info/
+
+# Docker
+*.log
+*.pid
+*.sock
+*.db
+/secrets/
+.env  # If you store environment variables in a file
+
+# VS Code & PyCharm
+.vscode/
+.idea/
+
+# Ignore compiled files
+*.swp
+*.swo
+
+# Git metadata (if any submodules or temporary files)
+.git/

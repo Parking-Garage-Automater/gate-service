@@ -1,0 +1,10 @@
+fastapi[all]
+uvicorn
+requests
+sqlalchemy
+asyncpg
+pydantic
+alembic
+greenlet
+asyncpg
+pytest
