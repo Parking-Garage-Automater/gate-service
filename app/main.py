@@ -56,17 +56,19 @@ async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get
         raise HTTPException(status_code=response.status_code, detail="Payment processing failed")
 
     pay_data = response.json()
-    if pay_data.get("status") != "success":
-        raise HTTPException(status_code=402, detail="Payment was not successful")
+    if pay_data.get("status") not in ["success", "already_paid"]:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Payment failed: {pay_data.get('message')}"
+        )
 
-    # Mark session as exited after successful payment
     exit_session = await mark_session_exited(db, entry.plate_number)
 
     return VehicleExitResponse(
         message="Exit recorded, payment successful",
         plate_number=entry.plate_number,
         exit_timestamp=exit_session.exit_timestamp,
-        fee=pay_data.get("amount")
+        fee=pay_data.get("fee")
     )
 
 if __name__ == "__main__":
