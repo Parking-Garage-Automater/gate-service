@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, Numeric
+from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP
 from datetime import datetime
 from app.database import Base
 
@@ -10,3 +10,4 @@ class ParkingSession(Base):
     entry_timestamp = Column(TIMESTAMP, default=datetime.utcnow)
     exit_timestamp = Column(TIMESTAMP, nullable=True)
     is_active = Column(Boolean, default=True)
+

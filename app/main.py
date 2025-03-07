@@ -4,7 +4,6 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import init_db, get_db
 from app.schemas import VehicleEntryCreate, VehicleEntryResponse, VehicleExitResponse
-from datetime import datetime
 from app.crud import (
     get_active_session_by_plate,
     create_parking_session,
@@ -42,13 +41,12 @@ async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get
     if not session_data:
         raise HTTPException(status_code=400, detail="No active parking session found")
 
-    # Request fee calculation and payment processing from Payment Service
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{PAYMENT_SERVICE_URL}/api/v1/payments/",
             json={
                 "parking_session_id": session_data.id,
-                "plate_number": entry.plate_number  # Ensure Payment Service knows which car
+                "plate_number": entry.plate_number
             }
         )
 
