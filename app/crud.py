@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from datetime import datetime
-import math
 from app.models import ParkingSession
 
 async def get_active_session_by_plate(db: AsyncSession, plate_number: str):
