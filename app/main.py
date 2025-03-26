@@ -32,7 +32,7 @@ async def on_startup():
     await init_db()
 
 
-@app.post("/api/v1/sessions/entry/", response_model=VehicleEntryResponse)
+@app.post("/gs/api/v1/sessions/entry/", response_model=VehicleEntryResponse)
 async def vehicle_entry(entry: VehicleEntryCreate, db: AsyncSession = Depends(get_db)):
     existing = await get_active_session_by_plate(db, entry.plate_number)
     if existing:
@@ -50,7 +50,7 @@ async def vehicle_entry(entry: VehicleEntryCreate, db: AsyncSession = Depends(ge
     )
 
 
-@app.put("/api/v1/sessions/exit/", response_model=VehicleExitResponse)
+@app.put("/gs/api/v1/sessions/exit/", response_model=VehicleExitResponse)
 async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get_db)):
     session_data = await get_active_session_by_plate(db, entry.plate_number)
     if not session_data:
@@ -58,7 +58,7 @@ async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{PAYMENT_SERVICE_URL}/api/v1/payments/",
+            f"{PAYMENT_SERVICE_URL}/ps/api/v1/payments/",
             json={
                 "parking_session_id": session_data.id,
                 "plate_number": entry.plate_number
