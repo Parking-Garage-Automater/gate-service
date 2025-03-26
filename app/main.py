@@ -12,6 +12,8 @@ from app.crud import (
     mark_session_exited
 )
 from aiomqtt import Client
+import ssl
+
 
 app = FastAPI(title="Gate Service", version="1.0.1")
 
@@ -85,19 +87,33 @@ async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get
         fee=pay_data.get("fee")
     )
 
-
 async def publish_mqtt(topic: str, message: str):
     try:
+        tls_enabled = os.getenv("MQTT_TLS_ENABLED", "false").lower() == "true"
+        ssl_context = None
+
+        if tls_enabled:
+            ca_cert = os.getenv("MQTT_CA_CERT")
+            client_cert = os.getenv("MQTT_CLIENT_CERT")
+            client_key = os.getenv("MQTT_CLIENT_KEY")
+
+            ssl_context = ssl.create_default_context(cafile=ca_cert)
+
+            if client_cert and client_key:
+                ssl_context.load_cert_chain(certfile=client_cert, keyfile=client_key)
+
         async with Client(
             hostname=MQTT_HOST,
             port=MQTT_PORT,
             username=MQTT_USERNAME,
-            password=MQTT_PASSWORD
+            password=MQTT_PASSWORD,
+            ssl_context=ssl_context
         ) as client:
             await client.publish(topic, message.encode())
             print(f"Published MQTT message '{message}' to topic '{topic}'")
     except Exception as e:
         print(f"MQTT publish failed: {e}")
+
 
 
 if __name__ == "__main__":
