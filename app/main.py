@@ -16,6 +16,11 @@ import ssl
 
 
 app = FastAPI(title="Gate Service", version="1.0.1")
+app = FastAPI(
+    title="Gate Service",
+    version="1.0.1",
+    root_path="/gs"
+)
 
 # Environment variables
 PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL")
