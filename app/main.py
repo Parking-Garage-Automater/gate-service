@@ -13,6 +13,8 @@ from app.crud import (
 )
 from aiomqtt import Client
 import ssl
+from starlette.status import HTTP_424_FAILED_DEPENDENCY
+
 
 
 app = FastAPI(title="Gate Service", version="1.0.1")
@@ -37,7 +39,7 @@ async def on_startup():
     await init_db()
 
 
-@app.post("/gs/api/v1/sessions/entry/", response_model=VehicleEntryResponse)
+@app.post("/api/v1/sessions/entry/", response_model=VehicleEntryResponse)
 async def vehicle_entry(entry: VehicleEntryCreate, db: AsyncSession = Depends(get_db)):
     existing = await get_active_session_by_plate(db, entry.plate_number)
     if existing:
@@ -55,7 +57,7 @@ async def vehicle_entry(entry: VehicleEntryCreate, db: AsyncSession = Depends(ge
     )
 
 
-@app.put("/gs/api/v1/sessions/exit/", response_model=VehicleExitResponse)
+@app.put("/api/v1/sessions/exit/", response_model=VehicleExitResponse)
 async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get_db)):
     session_data = await get_active_session_by_plate(db, entry.plate_number)
     if not session_data:
@@ -71,7 +73,7 @@ async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get
         )
 
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail="Payment processing failed")
+        raise HTTPException(status_code=HTTP_424_FAILED_DEPENDENCY, detail="Payment processing failed")
 
     pay_data = response.json()
     if pay_data.get("status") not in ["success", "already_paid"]:
