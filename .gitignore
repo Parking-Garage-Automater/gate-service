@@ -32,6 +32,13 @@ env/
 # Git metadata (if any submodules or temporary files)
 .git/
 
-# MQTT TLS BROKER CERT
+# Ignore all .crt files
 *.crt
+
+# Do not ignore the cert folder itself
+!app/cert/
+!app/cert/.gitkeep
+
+
+
 
