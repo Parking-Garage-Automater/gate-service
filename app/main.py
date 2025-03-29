@@ -14,30 +14,36 @@ from app.crud import (
 from aiomqtt import Client
 import ssl
 from starlette.status import HTTP_424_FAILED_DEPENDENCY
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
-
-app = FastAPI(title="Gate Service", version="1.0.1")
 app = FastAPI(
     title="Gate Service",
     version="1.0.1",
     root_path="/gs"
 )
 
+# Compute default certificate path relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CA_CERT = os.path.join(BASE_DIR, "cert", "mqtt_broker_cert.crt")
+
 # Environment variables
 PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL")
 MQTT_HOST = os.getenv("MQTT_HOST")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_TLS_PORT = int(os.getenv("MQTT_TLS_PORT", "8883"))
 MQTT_USERNAME = os.getenv("MQTT_USERNAME")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 MQTT_ENTRY_TOPIC = os.getenv("MQTT_ENTRY_TOPIC", "parking/gate/entry")
 MQTT_EXIT_TOPIC = os.getenv("MQTT_EXIT_TOPIC", "parking/gate/exit")
-
+MQTT_TLS_ENABLED = os.getenv("MQTT_TLS_ENABLED", "true").lower() == "true"
+# Use the environment variable if set, otherwise use the computed default path
+MQTT_CA_CERT = os.getenv("MQTT_CA_CERT", DEFAULT_CA_CERT)
 
 @app.on_event("startup")
 async def on_startup():
     await init_db()
-
 
 @app.post("/api/v1/sessions/entry/", response_model=VehicleEntryResponse)
 async def vehicle_entry(entry: VehicleEntryCreate, db: AsyncSession = Depends(get_db)):
@@ -47,7 +53,6 @@ async def vehicle_entry(entry: VehicleEntryCreate, db: AsyncSession = Depends(ge
 
     new_session = await create_parking_session(db, entry.plate_number)
 
-    # MQTT: Trigger entry gate
     asyncio.create_task(publish_mqtt(MQTT_ENTRY_TOPIC, "open"))
 
     return VehicleEntryResponse(
@@ -84,7 +89,6 @@ async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get
 
     exit_session = await mark_session_exited(db, entry.plate_number)
 
-    # MQTT: Trigger exit gate
     asyncio.create_task(publish_mqtt(MQTT_EXIT_TOPIC, "open"))
 
     return VehicleExitResponse(
@@ -96,32 +100,29 @@ async def vehicle_exit(entry: VehicleEntryCreate, db: AsyncSession = Depends(get
 
 async def publish_mqtt(topic: str, message: str):
     try:
-        tls_enabled = os.getenv("MQTT_TLS_ENABLED", "false").lower() == "true"
-        ssl_context = None
+        tls_context = None
 
-        if tls_enabled:
-            ca_cert = os.getenv("MQTT_CA_CERT")
-            client_cert = os.getenv("MQTT_CLIENT_CERT")
-            client_key = os.getenv("MQTT_CLIENT_KEY")
+        if MQTT_TLS_ENABLED:
+            logging.info("TLS is enabled. Setting up SSL context.")
+            tls_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+            tls_context.load_verify_locations(cafile=MQTT_CA_CERT)
+            tls_context.check_hostname = False
 
-            ssl_context = ssl.create_default_context(cafile=ca_cert)
-
-            if client_cert and client_key:
-                ssl_context.load_cert_chain(certfile=client_cert, keyfile=client_key)
+        port = MQTT_TLS_PORT if MQTT_TLS_ENABLED else MQTT_PORT
+        logging.info(f"Connecting to MQTT broker at {MQTT_HOST}:{port}")
 
         async with Client(
             hostname=MQTT_HOST,
-            port=MQTT_PORT,
+            port=port,
             username=MQTT_USERNAME,
             password=MQTT_PASSWORD,
-            ssl_context=ssl_context
+            tls_context=tls_context
         ) as client:
+            logging.info(f"Publishing message '{message}' to topic '{topic}'")
             await client.publish(topic, message.encode())
-            print(f"Published MQTT message '{message}' to topic '{topic}'")
+            logging.info(f"Successfully published '{message}' to '{topic}'")
     except Exception as e:
-        print(f"MQTT publish failed: {e}")
-
-
+        logging.error(f"MQTT publish failed: {e}")
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

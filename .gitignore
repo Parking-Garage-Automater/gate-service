@@ -31,3 +31,7 @@ env/
 
 # Git metadata (if any submodules or temporary files)
 .git/
+
+# MQTT TLS BROKER CERT
+*.crt
+
