@@ -34,10 +34,11 @@ env/
 
 # Ignore all .crt files
 *.crt
+*.key
 
-# Do not ignore the cert folder itself
-!app/cert/
-!app/cert/.gitkeep
+# Do not ignore the mqtt folder itself
+!app/mqtt/
+!app/mqtt/.gitkeep
 
 
 

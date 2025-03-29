@@ -26,7 +26,9 @@ app = FastAPI(
 
 # Compute default certificate path relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_CA_CERT = os.path.join(BASE_DIR, "cert", "mqtt_broker_cert.crt")
+CA_CERT = os.path.join(BASE_DIR, "mqtt", "iot_mqtt_ca.crt")
+CLIENT_CERT = os.path.join(BASE_DIR, "mqtt", "iot_mqtt_client.crt")
+CLIENT_KEY = os.path.join(BASE_DIR, "mqtt", "iot_mqtt_client.key")
 
 # Environment variables
 PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL")
@@ -38,8 +40,6 @@ MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 MQTT_ENTRY_TOPIC = os.getenv("MQTT_ENTRY_TOPIC", "parking/gate/entry")
 MQTT_EXIT_TOPIC = os.getenv("MQTT_EXIT_TOPIC", "parking/gate/exit")
 MQTT_TLS_ENABLED = os.getenv("MQTT_TLS_ENABLED", "true").lower() == "true"
-# Use the environment variable if set, otherwise use the computed default path
-MQTT_CA_CERT = os.getenv("MQTT_CA_CERT", DEFAULT_CA_CERT)
 
 @app.on_event("startup")
 async def on_startup():
@@ -104,9 +104,10 @@ async def publish_mqtt(topic: str, message: str):
 
         if MQTT_TLS_ENABLED:
             logging.info("TLS is enabled. Setting up SSL context.")
+
             tls_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-            tls_context.load_verify_locations(cafile=MQTT_CA_CERT)
-            tls_context.check_hostname = False
+            tls_context.load_verify_locations(cafile=CA_CERT)
+            tls_context.load_cert_chain(certfile=CLIENT_CERT, keyfile=CLIENT_KEY)
 
         port = MQTT_TLS_PORT if MQTT_TLS_ENABLED else MQTT_PORT
         logging.info(f"Connecting to MQTT broker at {MQTT_HOST}:{port}")
